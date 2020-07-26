@@ -69,7 +69,7 @@ namespace ColorCat
             //CG4 = LEVEL
             //CG5 = TAG
             //CG6 = TEXT
-            const string ADB_LINE_REGEX = @"^(\d\d-\d\d \d\d:\d\d:\d\d.\d*)  (\d*)  (\d*) ([VDIWEFS]) (\w*): (.*)$";
+            const string ADB_LINE_REGEX = @"^(\d\d-\d\d \d\d:\d\d:\d\d.\d*)\s*(\d*)\s*(\d*)\s*([VDIWEFS])\s*(.*)\s*:\s*(.*)$";
 
             //get level with regex
             Match match = Regex.Match(e.Data, ADB_LINE_REGEX);
