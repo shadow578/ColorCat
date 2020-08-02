@@ -7,12 +7,24 @@ namespace ColorCat
 {
     class Program
     {
+        /// <summary>
+        /// lock object for console writes
+        /// </summary>
         static readonly object CON_LOCK = new object();
+
+        /// <summary>
+        /// adb child process
+        /// </summary>
+        static Process adbProc;
 
         static void Main(string[] cmdLine)
         {
+            //save original colors first
+            ConsoleColor originalFg = Console.ForegroundColor;
+            ConsoleColor originalBg = Console.BackgroundColor;
+
             //add own help if no cmdLine
-            if(cmdLine.Length == 0)
+            if (cmdLine.Length == 0)
             {
                 Console.WriteLine("ColorCat usage: just like normal adb ;)\n\n");
             }
@@ -31,24 +43,56 @@ namespace ColorCat
                 UseShellExecute = false,
             };
 
-            //start process
-            using (Process p = new Process())
+            //register CTRL+C to exit adb process
+            Console.CancelKeyPress += OnConsoleCancel;
+
+            //prepare process
+            adbProc = new Process()
             {
-                //prepare process
-                p.StartInfo = adbSI;
-                p.EnableRaisingEvents = true;
-                p.ErrorDataReceived += WriteADBError;
-                p.OutputDataReceived += WriteADBOutput;
+                StartInfo = adbSI,
+                EnableRaisingEvents = true
+            };
+            adbProc.ErrorDataReceived += WriteADBError;
+            adbProc.OutputDataReceived += WriteADBOutput;
 
-                //start adb
-                p.Start();
+            //start process
+            adbProc.Start();
 
-                //begin reading output
-                p.BeginErrorReadLine();
-                p.BeginOutputReadLine();
+            //begin reading output
+            adbProc.BeginOutputReadLine();
+            adbProc.BeginErrorReadLine();
 
-                //wait until process exits
-                p.WaitForExit();
+            //wait until process exits or is killed
+            adbProc.WaitForExit();
+
+            //dispose adb process
+            lock (adbProc)
+            {
+                adbProc.Dispose();
+                adbProc = null;
+            }
+
+            //reset colors
+            Console.ForegroundColor = originalFg;
+            Console.BackgroundColor = originalBg;
+        }
+
+        /// <summary>
+        /// Called when CTRL+C is pressed
+        /// </summary>
+        static void OnConsoleCancel(object sender, ConsoleCancelEventArgs e)
+        {
+            //check adb already started
+            if (adbProc == null) return;
+
+            //cancel event killing us
+            e.Cancel = true;
+            Console.WriteLine("CTRL+C pressed, exiting asap...");
+
+            //kill adb
+            lock (adbProc)
+            {
+                adbProc.Kill();
             }
         }
 
